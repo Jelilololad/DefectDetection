@@ -1,14 +1,14 @@
 import pandas as pd
 from pathlib import Path
-from imblearn.pipeline import Pipeline
+from sklearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import RobustScaler
 from sklearn.model_selection import GridSearchCV, train_test_split
-from xgboost import XGBClassifier
 import pickle
 import json
 from sklearn.metrics import log_loss, roc_auc_score
 from data import makedata
+from lightgbm import LGBMClassifier
 
 
 def data_wrangling():
@@ -32,23 +32,23 @@ def data_wrangling():
 
     return X_train, X_test, y_train, y_test
 
-
 def train_model(X_train, y_train):
 
     pipe = Pipeline([
         ("scaler", RobustScaler()),
         ("smote", SMOTE(random_state=42)),
-        ("model", XGBClassifier(
-            objective="binary:logistic",
-            eval_metric="logloss",
-            random_state=42
+        ("model", LGBMClassifier(
+            objective="binary",
+            random_state=42,
+            verbosity=-1
         ))
     ])
 
     params = {
-        "model__n_estimators": [200, 400],
-        "model__max_depth": [4, 6, 8],
-        "model__learning_rate": [0.01, 0.05, 0.1]
+        "model__n_estimators": [100, 200],
+        "model__max_depth": [3, 4, 5],
+        "model__num_leaves": [15, 31],
+        "model__learning_rate": [0.05, 0.1]
     }
 
     grid = GridSearchCV(

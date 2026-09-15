@@ -6,8 +6,6 @@ import pickle
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from data import makedata
-from model import main
 from pathlib import Path
 
 app = FastAPI()
