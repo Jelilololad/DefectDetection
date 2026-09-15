@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
+from models import mains
 
 app = FastAPI()
 
@@ -14,13 +15,14 @@ app = FastAPI()
 
 model_path = Path("model/model.pkl")
 
-try:
-    if not model_path.exists():
-        raise FileNotFoundError
-except FileNotFoundError:
-    print("File does not exist. Run model.py first.")
-    model = None
+if model_path.exists():
+    # Load trained model
+    with open(model_path, "rb") as f:
+        model = pickle.load(f)
 else:
+    # Train model if missing
+    print("Model not found. Training new model...")
+    main()  # this creates model.pkl
     with open(model_path, "rb") as f:
         model = pickle.load(f)
 

@@ -92,7 +92,7 @@ def save_model(best_model, metrics):
     return model_path, metrics_path
 
 
-def main():
+def mains():
 
     file_path = Path("data/data.csv")
 
@@ -128,7 +128,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    mains()
 
 
 
