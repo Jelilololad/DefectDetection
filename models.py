@@ -1,6 +1,6 @@
 import pandas as pd
 from pathlib import Path
-from sklearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline
 from imblearn.over_sampling import SMOTE
 from sklearn.preprocessing import RobustScaler
 from sklearn.model_selection import GridSearchCV, train_test_split
@@ -129,6 +129,3 @@ def mains():
 
 if __name__ == "__main__":
     mains()
-
-
-
