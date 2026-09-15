@@ -22,7 +22,7 @@ if model_path.exists():
 else:
     # Train model if missing
     print("Model not found. Training new model...")
-    main()  # this creates model.pkl
+    mains()  # this creates model.pkl
     with open(model_path, "rb") as f:
         model = pickle.load(f)
 
