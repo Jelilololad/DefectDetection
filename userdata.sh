@@ -18,7 +18,7 @@ apt install -y git python3 python3-venv python3-pip nginx libgomp1
 # -----------------------------
 # 3. Clone your project (HTTPS + PAT)
 # -----------------------------
-git clone https://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@github.com/Jelilololad/Defect_Detection.git .
+git clone https://github.com/Jelilololad/Defect_Detection.git .
 
 # -----------------------------
 # 4. Create virtual environment
