@@ -18,7 +18,7 @@ apt install -y git python3 python3-venv python3-pip nginx libgomp1
 # -----------------------------
 # 3. Clone your project (HTTPS + PAT)
 # -----------------------------
-git clone https://github.com/Jelilololad/Defect_Detection.git .
+git clone https://github.com/Jelilololad/DefectDetection.git .
 
 # -----------------------------
 # 4. Create virtual environment
@@ -30,7 +30,7 @@ pip install --upgrade pip
 # -----------------------------
 # 5. Install Python dependencies
 # -----------------------------
-pip install numpy pandas scikit-learn==1.4.2 xgboost lightgbm fastapi pydantic imbalanced-learn uvicorn
+pip install -r requirements.txt
 
 # -----------------------------
 # 6. Train your model (if needed)
