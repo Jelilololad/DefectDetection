@@ -1,0 +1,32 @@
+# Virtual environments
+venv/
+.venv/
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Git
+.git/
+.gitignore
+
+# VS Code
+.vscode/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Python test cache
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+
+# Local environment variables
+.env

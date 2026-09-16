@@ -5,3 +5,6 @@ projself1
 data
 asycnapp.py
 __pycache__
+.github
+.venv
+.venv/
