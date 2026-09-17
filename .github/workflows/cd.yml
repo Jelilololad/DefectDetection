@@ -9,8 +9,6 @@ on:
     branches:
       - main
 
-  workflow_dispatch:
-
 permissions:
   actions: read
   contents: read
@@ -28,11 +26,8 @@ jobs:
   deploy:
 
     if: >
-      github.event_name == 'workflow_dispatch' ||
-      (
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.head_branch == 'main'
-      )
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
 
     runs-on: ubuntu-latest
 
@@ -41,16 +36,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
       - name: Download Trained Model
-        if: github.event_name == 'workflow_run'
         uses: actions/download-artifact@v4
         with:
           name: trained-model
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
           path: trained-artifacts
-
 
       - name: Configure SSH
         run: |
@@ -59,23 +51,43 @@ jobs:
           echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+          echo "Validating SSH private key..."
           ssh-keygen -y -f ~/.ssh/id_rsa > /dev/null
 
+          echo "SSH key validation successful."
+
+      - name: Test EC2 SSH Connectivity
+        run: |
+          echo "Testing connection to EC2..."
+          echo "Host: ${{ secrets.VM_HOST }}"
+          echo "Port: 22"
+
+          nc -4 -vz -w 10 "${{ secrets.VM_HOST }}" 22
+
+          echo "TCP port 22 is reachable."
 
       - name: Copy Model Artifacts
-        if: github.event_name == 'workflow_run'
         run: |
           scp \
+            -4 \
+            -o ConnectTimeout=30 \
+            -o ConnectionAttempts=3 \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            -i ~/.ssh/id_rsa \
             trained-artifacts/model.pkl \
             trained-artifacts/metrics.json \
             "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/"
 
-
       - name: Deploy Application
         run: |
-
-          ssh -o StrictHostKeyChecking=no \
-            ssh -o StrictHostKeyChecking=no \
+          ssh \
+            -4 \
+            -o ConnectTimeout=30 \
+            -o ConnectionAttempts=3 \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            -i ~/.ssh/id_rsa \
             "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
 
             set -e
@@ -89,16 +101,13 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-
             echo "Activating virtual environment..."
 
             source .venv/bin/activate
 
-
             echo "Updating dependencies..."
 
             python -m pip install -r requirements.txt
-
 
             if [ -f /tmp/model.pkl ]; then
 
@@ -109,21 +118,17 @@ jobs:
 
             fi
 
-
             echo "Validating Python code..."
 
             python -m compileall src monitoring
-
 
             echo "Restarting FastAPI..."
 
             sudo systemctl restart defect_uvicorn.service
 
-
             echo "Checking FastAPI service..."
 
             sudo systemctl is-active --quiet defect_uvicorn.service
-
 
             echo "Checking API health..."
 
@@ -131,23 +136,28 @@ jobs:
               http://127.0.0.1:8001/health
 
             echo
+
             echo "Checking ALB health..."
 
             curl --fail --silent --show-error \
               http://model-deployment-1499719187.us-east-1.elb.amazonaws.com/health
 
-
             echo
+
             echo "Deployment successful."
 
           EOF
 
-
       - name: Cleanup Remote Files
         if: always()
         run: |
-
-          ssh -o StrictHostKeyChecking=no \
+          ssh \
+            -4 \
+            -o ConnectTimeout=15 \
+            -o ConnectionAttempts=2 \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            -i ~/.ssh/id_rsa \
             "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
 
             rm -f /tmp/model.pkl
