@@ -55,6 +55,14 @@ jobs:
           ssh-keygen -y -f ~/.ssh/id_rsa > /dev/null
 
           echo "SSH key validation successful."
+          
+      - name: Test EC2 Ports
+        run: |
+          echo "Testing port 22..."
+          nc -4 -vz -w 10 54.204.139.114 22 || true
+
+          echo "Testing port 80..."
+          nc -4 -vz -w 10 54.204.139.114 80 || true
 
       - name: Test EC2 SSH Connectivity
         run: |
