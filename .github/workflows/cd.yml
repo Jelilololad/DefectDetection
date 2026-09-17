@@ -136,12 +136,31 @@ jobs:
 
             sudo systemctl is-active --quiet defect_uvicorn.service
 
-            echo "Checking API health..."
+            echo "Waiting for FastAPI to become ready..."
 
-            curl --fail --silent --show-error \
-              http://127.0.0.1:8001/health
+            for i in {1..30}; do
 
-            echo
+              if curl --fail --silent \
+                http://127.0.0.1:8001/health > /dev/null; then
+
+                echo "FastAPI is ready."
+                break
+
+              fi
+
+              echo "FastAPI not ready yet. Attempt $i/30..."
+              sleep 2
+
+              if [ "$i" -eq 30 ]; then
+                echo "FastAPI failed to become ready."
+                sudo systemctl status defect_uvicorn.service --no-pager
+                sudo journalctl -u defect_uvicorn.service -n 50 --no-pager
+                exit 1
+              fi
+
+            done
+
+            echo "API health check passed."
 
             echo "Checking ALB health..."
 
