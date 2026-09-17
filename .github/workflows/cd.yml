@@ -59,7 +59,7 @@ jobs:
           echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keygen -y -f ~/.ssh/id_rsa > /dev/null
 
 
       - name: Copy Model Artifacts
@@ -74,7 +74,9 @@ jobs:
       - name: Deploy Application
         run: |
 
-          ssh "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no \
+            ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
 
             set -e
 
@@ -145,7 +147,8 @@ jobs:
         if: always()
         run: |
 
-          ssh "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
+          ssh -o StrictHostKeyChecking=no \
+            "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
 
             rm -f /tmp/model.pkl
             rm -f /tmp/metrics.json
