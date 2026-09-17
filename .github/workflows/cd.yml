@@ -59,11 +59,8 @@ jobs:
       - name: Test EC2 SSH Connectivity
         run: |
           echo "Testing connection to EC2..."
-          echo "Host: ${{ secrets.VM_HOST }}"
-          echo "Port: 22"
-
-          nc -4 -vz -w 10 "${{ secrets.VM_HOST }}" 22
-
+          echo "Host: 54.204.139.114"
+          nc -4 -vz -w 10 54.204.139.114 22
           echo "TCP port 22 is reachable."
 
       - name: Copy Model Artifacts
@@ -77,7 +74,7 @@ jobs:
             -i ~/.ssh/id_rsa \
             trained-artifacts/model.pkl \
             trained-artifacts/metrics.json \
-            "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/"
+            "${{ secrets.VM_USER }}@54.204.139.114:/tmp/"
 
       - name: Deploy Application
         run: |
@@ -88,7 +85,7 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o IdentitiesOnly=yes \
             -i ~/.ssh/id_rsa \
-            "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
+            "${{ secrets.VM_USER }}@54.204.139.114" << 'EOF'
 
             set -e
 
@@ -158,7 +155,7 @@ jobs:
             -o StrictHostKeyChecking=no \
             -o IdentitiesOnly=yes \
             -i ~/.ssh/id_rsa \
-            "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
+            "${{ secrets.VM_USER }}@54.204.139.114" << 'EOF'
 
             rm -f /tmp/model.pkl
             rm -f /tmp/metrics.json
