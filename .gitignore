@@ -4,6 +4,4 @@ model
 data
 asycnapp.py
 __pycache__
-.github
-.venv/
 .venv/

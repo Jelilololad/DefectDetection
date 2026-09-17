@@ -1,0 +1,162 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+  workflow_dispatch:
+
+env:
+  APP_DIR: /opt/defect-app
+  SERVICE_NAME: defect_uvicorn.service
+
+jobs:
+
+  deploy:
+
+    # Only deploy when CI completed successfully.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ---------------------------------------------
+      # Checkout Repository
+      # ---------------------------------------------
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+
+      # ---------------------------------------------
+      # Download Model Artifact From CI
+      # ---------------------------------------------
+
+      - name: Download Trained Model
+        if: github.event_name == 'workflow_run'
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+          path: trained-artifacts
+
+
+      # ---------------------------------------------
+      # Setup SSH
+      # ---------------------------------------------
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+
+          echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts
+
+
+      # ---------------------------------------------
+      # Copy Model To EC2
+      # ---------------------------------------------
+
+      - name: Copy Model To EC2
+        if: github.event_name == 'workflow_run'
+        run: |
+          scp \
+            trained-artifacts/model.pkl \
+            trained-artifacts/metrics.json \
+            "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/"
+
+
+      # ---------------------------------------------
+      # Deploy Application
+      # ---------------------------------------------
+
+      - name: Deploy Application
+        run: |
+
+          ssh "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
+
+            set -e
+
+            echo "Starting deployment..."
+
+            cd /opt/defect-app
+
+            echo "Updating application code..."
+
+            git fetch origin main
+            git reset --hard origin/main
+
+
+            echo "Activating virtual environment..."
+
+            source .venv/bin/activate
+
+
+            echo "Updating dependencies..."
+
+            python -m pip install -r requirements.txt
+
+
+            if [ -f /tmp/model.pkl ]; then
+
+              echo "Installing trained model..."
+
+              cp /tmp/model.pkl artifacts/model.pkl
+              cp /tmp/metrics.json artifacts/metrics.json
+
+            fi
+
+
+            echo "Validating Python code..."
+
+            python -m compileall src monitoring
+
+
+            echo "Restarting FastAPI..."
+
+            sudo systemctl restart defect_uvicorn.service
+
+
+            echo "Checking service..."
+
+            sudo systemctl is-active --quiet defect_uvicorn.service
+
+
+            echo "Checking API health..."
+
+            curl --fail --silent \
+              http://127.0.0.1:8001/health
+
+
+            echo
+            echo "Deployment successful."
+
+          EOF
+
+
+      # ---------------------------------------------
+      # Cleanup Temporary Model Files
+      # ---------------------------------------------
+
+      - name: Cleanup Remote Files
+        if: always()
+        run: |
+
+          ssh "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}" << 'EOF'
+
+            rm -f /tmp/model.pkl
+            rm -f /tmp/metrics.json
+
+          EOF

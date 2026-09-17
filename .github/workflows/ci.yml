@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+
+  ci:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # ---------------------------------------------
+      # Checkout
+      # ---------------------------------------------
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+
+      # ---------------------------------------------
+      # Setup Python
+      # ---------------------------------------------
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+
+      # ---------------------------------------------
+      # Install Dependencies
+      # ---------------------------------------------
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+
+      # ---------------------------------------------
+      # Validate Python Code
+      # ---------------------------------------------
+
+      - name: Validate Python Code
+        run: |
+          python -m compileall src monitoring
+
+
+      # ---------------------------------------------
+      # Run Tests
+      # ---------------------------------------------
+
+      - name: Run Tests
+        run: |
+          if [ -d tests ]; then
+            pytest -v
+          else
+            echo "No tests directory found - skipping tests"
+          fi
+
+
+      # ---------------------------------------------
+      # Train Model
+      # ---------------------------------------------
+
+      - name: Train Model
+        run: |
+          python -m src.models
+
+
+      # ---------------------------------------------
+      # Verify Model Artifacts
+      # ---------------------------------------------
+
+      - name: Verify Model Artifacts
+        run: |
+          test -f artifacts/model.pkl
+          test -f artifacts/metrics.json
+
+          echo "Model artifact:"
+          ls -lh artifacts/model.pkl
+
+          echo "Model metrics:"
+          cat artifacts/metrics.json
+
+
+      # ---------------------------------------------
+      # Upload Model Artifacts
+      # ---------------------------------------------
+
+      - name: Upload Model Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: trained-model
+          path: |
+            artifacts/model.pkl
+            artifacts/metrics.json
+
+
+      # ---------------------------------------------
+      # Docker Build Validation
+      # ---------------------------------------------
+
+      - name: Build Docker Image
+        run: |
+          docker build -t defect-app:test .

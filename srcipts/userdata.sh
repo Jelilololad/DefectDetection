@@ -60,9 +60,10 @@ EOF
 # -----------------------------
 # 8. Configure Nginx reverse proxy
 # -----------------------------
-cat >/etc/nginx/conf.d/defect_app.conf <<'EOF'
+cat > /etc/nginx/conf.d/defect_app.conf <<'EOF'
 server {
     listen 80;
+    listen [::]:80;
     server_name _;
 
     location / {
@@ -70,19 +71,26 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_connect_timeout 60s;
-        proxy_read_timeout 120s;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 EOF
 
-rm -f /etc/nginx/sites-enabled/default || true
+# Remove default Nginx site
+rm -f /etc/nginx/sites-enabled/default
 
-# -----------------------------
-# 9. Start & enable services
-# -----------------------------
+# Check Nginx configuration
+nginx -t
+
+# Start services
 systemctl daemon-reload
-systemctl enable defect_uvicorn
-systemctl start defect_uvicorn
-systemctl enable nginx
-systemctl restart nginx
+systemctl enable --now defect_uvicorn
+systemctl enable --now nginx
+
+# Test application
+sleep 2
+curl -f http://127.0.0.1:8001/health
+curl -f http://127.0.0.1/health
+
+echo ""
+echo "Deployment successful."
