@@ -6,8 +6,18 @@ on:
       - CI
     types:
       - completed
+    branches:
+      - main
 
   workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
 
 env:
   APP_DIR: /opt/defect-app
@@ -17,7 +27,6 @@ jobs:
 
   deploy:
 
-    # Only deploy when CI completed successfully.
     if: >
       github.event_name == 'workflow_dispatch' ||
       (
@@ -29,17 +38,9 @@ jobs:
 
     steps:
 
-      # ---------------------------------------------
-      # Checkout Repository
-      # ---------------------------------------------
-
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
-      # ---------------------------------------------
-      # Download Model Artifact From CI
-      # ---------------------------------------------
 
       - name: Download Trained Model
         if: github.event_name == 'workflow_run'
@@ -51,10 +52,6 @@ jobs:
           path: trained-artifacts
 
 
-      # ---------------------------------------------
-      # Setup SSH
-      # ---------------------------------------------
-
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
@@ -65,11 +62,7 @@ jobs:
           ssh-keyscan -H "${{ secrets.VM_HOST }}" >> ~/.ssh/known_hosts
 
 
-      # ---------------------------------------------
-      # Copy Model To EC2
-      # ---------------------------------------------
-
-      - name: Copy Model To EC2
+      - name: Copy Model Artifacts
         if: github.event_name == 'workflow_run'
         run: |
           scp \
@@ -77,10 +70,6 @@ jobs:
             trained-artifacts/metrics.json \
             "${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/tmp/"
 
-
-      # ---------------------------------------------
-      # Deploy Application
-      # ---------------------------------------------
 
       - name: Deploy Application
         run: |
@@ -129,14 +118,14 @@ jobs:
             sudo systemctl restart defect_uvicorn.service
 
 
-            echo "Checking service..."
+            echo "Checking FastAPI service..."
 
             sudo systemctl is-active --quiet defect_uvicorn.service
 
 
             echo "Checking API health..."
 
-            curl --fail --silent \
+            curl --fail --silent --show-error \
               http://127.0.0.1:8001/health
 
 
@@ -145,10 +134,6 @@ jobs:
 
           EOF
 
-
-      # ---------------------------------------------
-      # Cleanup Temporary Model Files
-      # ---------------------------------------------
 
       - name: Cleanup Remote Files
         if: always()
