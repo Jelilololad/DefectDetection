@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - main
+      - cicd-setup
+
 
   pull_request:
     branches:
       - main
+      - cicd-setup
 
   workflow_dispatch:
 
