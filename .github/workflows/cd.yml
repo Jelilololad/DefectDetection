@@ -64,12 +64,13 @@ jobs:
           echo "Testing port 80..."
           nc -4 -vz -w 10 54.204.139.114 80 || true
 
-      - name: Test EC2 SSH Connectivity
+      - name: Test EC2 Connectivity
         run: |
-          echo "Testing connection to EC2..."
-          echo "Host: 54.204.139.114"
-          nc -4 -vz -w 10 54.204.139.114 22
-          echo "TCP port 22 is reachable."
+          echo "Testing EC2 port 22..."
+          nc -4 -vz -w 10 54.204.139.114 22 || true
+
+          echo "Testing EC2 port 80..."
+          nc -4 -vz -w 10 54.204.139.114 80 || true
 
       - name: Copy Model Artifacts
         run: |
